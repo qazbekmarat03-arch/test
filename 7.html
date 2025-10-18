@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерактивті Математика Курсы</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- MathJax for rendering equations -->
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0fdf4; /* Very light green */
+            background-image:
+                radial-gradient(circle at 1px 1px, rgba(0, 128, 0, 0.1) 1px, transparent 0),
+                radial-gradient(circle at 15px 15px, rgba(0, 128, 0, 0.1) 1px, transparent 0);
+            background-size: 30px 30px;
+        }
+        .gradient-btn {
+            background-image: linear-gradient(to right, #22c55e, #16a34a);
+            transition: all 0.3s ease;
+        }
+        .gradient-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(22, 163, 74, 0.2), 0 4px 6px -2px rgba(22, 163, 74, 0.1);
+        }
+        .progress-bar-inner {
+            transition: width 0.5s ease-in-out;
+        }
+        .lesson-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .lesson-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .completed-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #16a34a;
+            border-radius: 0.75rem;
+            backdrop-filter: blur(2px);
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            max-width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .solution-iframe {
+            width: 100%;
+            height: calc(90vh - 100px); /* Adjust height for header/footer in modal */
+            border: none;
+            border-radius: 0.5rem;
+        }
+        .test-question-container {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background-color: #f9fafb;
+            border-radius: 0.5rem;
+        }
+        .test-option-label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+        }
+        .test-option-label input[type="radio"] {
+            margin-right: 0.75rem;
+            accent-color: #16a34a; /* Green accent color for radio buttons */
+        }
+        .math {
+            font-family: 'Times New Roman', serif; /* Ensure MathJax renders nicely */
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- Login Screen -->
+    <div id="login-container" class="min-h-screen flex items-center justify-center bg-gray-100" style="background-color: #f0fdf4;">
+        <div class="bg-white p-8 sm:p-10 rounded-2xl shadow-xl w-full max-w-sm">
+            <h1 class="text-3xl font-bold text-green-700 mb-2 text-center">Математика</h1>
+            <p class="text-gray-600 mb-6 text-center">Курсқа кіру үшін деректерді енгізіңіз</p>
+            <form id="login-form" class="space-y-4">
+                <input id="email-input" type="email" placeholder="Email мекенжайыңыз" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required>
+                <input id="code-input" type="text" placeholder="Сізге берілген жеке код" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required>
+                <button id="login-btn" type="submit" class="w-full gradient-btn text-white font-semibold py-3 px-4 rounded-lg shadow-md">
+                    Кіру
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- App Content -->
+    <div id="app-container" class="hidden">
+        <header class="bg-white/80 backdrop-blur-sm sticky top-0 z-10 shadow-md py-4 px-4 sm:px-8">
+            <div class="container mx-auto flex flex-col sm:flex-row justify-between items-center">
+                <h1 class="text-2xl sm:text-3xl font-bold text-green-700 mb-4 sm:mb-0">Интерактивті Математика Курсы</h1>
+                <div class="flex items-center space-x-4">
+                    <div class="text-right">
+                        <p id="user-email" class="text-sm font-medium text-gray-700"></p>
+                        <button id="logout-btn" class="text-xs text-red-600 hover:underline">Шығу</button>
+                    </div>
+                </div>
+            </div>
+            <div class="container mx-auto mt-4">
+                <p class="text-sm font-medium mb-1">Сіздің прогрессіңіз:</p>
+                <div class="w-full bg-gray-200 rounded-full h-4">
+                    <div id="progress-bar" class="bg-gradient-to-r from-green-400 to-emerald-600 h-4 rounded-full progress-bar-inner" style="width: 0%;"></div>
+                </div>
+                <p id="progress-text" class="text-right text-xs mt-1 font-semibold text-green-700">0/16 сабақ аяқталды</p>
+            </div>
+        </header>
+
+        <main id="lessons-grid" class="container mx-auto p-4 sm:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- Lesson cards will be injected here -->
+        </main>
+    </div>
+    
+    <!-- General Message Modal -->
+    <div id="message-modal" class="hidden modal-overlay">
+        <div class="modal-content w-full max-w-sm">
+            <p id="message-modal-text" class="mb-4 text-lg"></p>
+            <button id="message-modal-close-btn" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 w-full">Түсінікті</button>
+        </div>
+    </div>
+
+    <!-- Test Modal -->
+    <div id="test-modal" class="hidden modal-overlay">
+        <div class="modal-content w-full max-w-2xl">
+            <h2 id="test-modal-title" class="text-2xl font-bold text-green-700 mb-4">Тест</h2>
+            <div id="test-questions-container">
+                <!-- Test questions will be injected here -->
+            </div>
+            <div class="flex justify-end space-x-4 mt-6">
+                <button id="test-submit-btn" class="gradient-btn text-white font-semibold py-2 px-5 rounded-lg shadow-md">
+                    Тапсыру
+                </button>
+                <button id="test-cancel-btn" class="bg-gray-300 text-gray-800 font-semibold py-2 px-5 rounded-lg shadow-md hover:bg-gray-400">
+                    Жабу
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Solution Modal -->
+    <div id="solution-modal" class="hidden modal-overlay">
+        <div class="modal-content w-full max-w-4xl h-[90vh] flex flex-col">
+            <h2 id="solution-modal-title" class="text-2xl font-bold text-green-700 mb-4">Шешімдер</h2>
+            <iframe id="solution-iframe" class="flex-grow solution-iframe"></iframe>
+            <button id="solution-close-btn" class="bg-gray-300 text-gray-800 font-semibold py-2 px-5 rounded-lg shadow-md hover:bg-gray-400 mt-4">
+                Жабу
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Set Firebase log level for debugging
+        setLogLevel('debug');
+
+        // --- МАҢЫЗДЫ: FIREBASE ОРНАТУ ---
+        // 1. Firebase жобасын жасаңыз: https://console.firebase.google.com/
+        // 2. Жобаңызға веб-қолданба қосыңыз.
+        // 3. Төмендегі firebaseConfig нысанын өз конфигурацияңызбен ауыстырыңыз.
+        // 4. Firestore Database қосыңыз.
+        // 5. 'access_codes' атты коллекция жасаңыз. Әр оқушы үшін құжат жасаңыз.
+        //    - Құжаттың ID-і ретінде оқушының email-ін (кіші әріптермен) қолданыңыз.
+        //    - Құжат ішінде 'code' деген өріс жасап, оған бірегей кодты жазыңыз.
+        //    - Мысалы: құжат ID: student@example.com, өріс: { code: "MATH-STUDENT-01" }
+        const firebaseConfig = typeof __firebase_config !== 'undefined'
+            ? JSON.parse(__firebase_config)
+            : {
+                apiKey: "AIzaSyAyRg4CUZuhnuWR2AWk6FYltx-b5s2Tqeo",
+                authDomain: "durystap2025.firebaseapp.com",
+                projectId: "durystap2025",
+                storageBucket: "durystap2025.firebasestorage.app",
+                messagingSenderId: "758596577131",
+                appId: "1:758596577131:web:312e6fa16454bd090d4e2e",
+                measurementId: "G-FVK0TD21ZF"
+            };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-math-app';
+
+        // DOM Elements
+        const loginContainer = document.getElementById('login-container');
+        const appContainer = document.getElementById('app-container');
+        const loginForm = document.getElementById('login-form');
+        const emailInput = document.getElementById('email-input');
+        const codeInput = document.getElementById('code-input');
+        const logoutBtn = document.getElementById('logout-btn');
+        const userEmailEl = document.getElementById('user-email');
+        const lessonsGrid = document.getElementById('lessons-grid');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+
+        // Modals
+        const messageModal = document.getElementById('message-modal');
+        const messageModalText = document.getElementById('message-modal-text');
+        const messageModalCloseBtn = document.getElementById('message-modal-close-btn');
+
+        const testModal = document.getElementById('test-modal');
+        const testModalTitle = document.getElementById('test-modal-title');
+        const testQuestionsContainer = document.getElementById('test-questions-container');
+        const testSubmitBtn = document.getElementById('test-submit-btn');
+        const testCancelBtn = document.getElementById('test-cancel-btn');
+
+        const solutionModal = document.getElementById('solution-modal');
+        const solutionModalTitle = document.getElementById('solution-modal-title');
+        const solutionIframe = document.getElementById('solution-iframe');
+        const solutionCloseBtn = document.getElementById('solution-close-btn');
+
+        // Course Data with updated titles, homeworks, solutions and mock tests
+        const lessons = [
+            {
+                id: 1, title: '№1 Теңдеулер', video: 'https://www.youtube.com/watch?v=L14Ef4XNUiE',
+                homework: 'https://gemini.google.com/share/efcb30ca2001',
+                solution: 'https://gemini.google.com/share/efcb30ca2001',
+                test: { questions: [{ q: '1+1 қанша?', options: ['1', '2', '3', '4'], ans: '2' }, { q: 'Ең кіші жай сан?', options: ['0', '1', '2', '3'], ans: '2' }] }
+            },
+            {
+                id: 2, title: '№2 Теңсіздіктер', video: 'https://www.youtube.com/watch?v=lZ1fIuAUvoU',
+                homework: 'https://g.co/gemini/share/6190dd5b9de1',
+                solution: 'https://g.co/gemini/share/6190dd5b9de1',
+                test: { questions: [{ q: 'x > 5 теңсіздігінің шешімі?', options: ['x = 5', 'x < 5', 'x ≥ 5', 'x > 5'], ans: 'x > 5' }, { q: '3 + y < 10 теңсіздігінде y-тің ең үлкен бүтін мәні?', options: ['6', '7', '8', '9'], ans: '6' }] }
+            },
+            {
+                id: 3, title: '№3 Прогрессия', video: 'https://www.youtube.com/watch?v=JyYO_RgOVzM',
+                homework: ['https://g.co/gemini/share/d6035bdf079e', 'https://g.co/gemini/share/1ebf51fc9094'],
+                solution: 'https://g.co/gemini/share/d6035bdf079e',
+                test: { questions: [{ q: 'Арифметикалық прогрессияның айырмасы ($d$) қалай табылады?', options: ['$a_n - a_{n-1}$', '$a_n + a_{n-1}$', '$a_n \\cdot a_{n-1}$', '$a_n / a_{n-1}$'], ans: '$a_n - a_{n-1}$' }, { q: 'Геометриялық прогрессияның $q$ бөлігі қалай аталады?', options: ['Айырма', 'Көбейтінді', 'Бөлім', 'Еселік'], ans: 'Еселік' }] }
+            },
+            {
+                id: 4, title: '№4 Тригонометриялық өрнектер', video: 'https://www.youtube.com/watch?v=-0DwOFr6KoQ',
+                homework: 'https://g.co/gemini/share/08a6fde2c1a1',
+                solution: 'https://g.co/gemini/share/08a6fde2c1a1',
+                test: { questions: [{ q: '$\\sin^2 x + \\cos^2 x = ?$', options: ['0', '1', '2', '$\\tan x$'], ans: '1' }, { q: 'Тангенс функциясы қай квадранттарда оң мәнге ие?', options: ['I, II', 'I, III', 'II, IV', 'III, IV'], ans: 'I, III' }] }
+            },
+            {
+                id: 5, title: '№5 Кері тригонометрия', video: 'https://www.youtube.com/watch?v=AyG-cp9Vgjk',
+                homework: 'https://g.co/gemini/share/ac8129fe5f82',
+                solution: 'https://g.co/gemini/share/ac8129fe5f82',
+                test: { questions: [{ q: '$\\arcsin(1) = ?$', options: ['$\\pi/2$', '$\\pi$', '$0$', '$2\\pi$'], ans: '$\\pi/2$' }, { q: '$\\arctan(0) = ?$', options: ['$\\pi/2$', '$\\pi$', '$0$', '$2\\pi$'], ans: '$0$' }] }
+            },
+            {
+                id: 6, title: '№6 Логарифм', video: 'https://www.youtube.com/watch?v=r5uE_hfMhSY',
+                homework: 'https://g.co/gemini/share/8f3e16b364e5',
+                solution: 'https://g.co/gemini/share/8f3e16b364e5',
+                test: { questions: [{ q: '$\\log_a (x \\cdot y) = ?$', options: ['$\\log_a x + \\log_a y$', '$\\log_a x - \\log_a y$', '$\\log_a x \\cdot \\log_a y$', '$\\log_a x / \\log_a y$'], ans: '$\\log_a x + \\log_a y$' }, { q: '$\\log_a a = ?$', options: ['0', '1', 'a', '$1/a$'], ans: '1' }] }
+            },
+            {
+                id: 7, title: '№7 Логарифм теңсіздіктері', video: 'https://www.youtube.com/watch?v=hKU_GdtC_8I',
+                homework: 'https://g.co/gemini/share/e0e14c42bf55',
+                solution: 'https://g.co/gemini/share/e0e14c42bf55',
+                test: { questions: [{ q: 'Егер $a > 1$ болса, $\\log_a x > \\log_a y$ теңсіздігінің шешімі?', options: ['$x < y$', '$x > y$', '$x = y$', '$x \\le y$'], ans: '$x > y$' }, { q: 'Логарифмнің негізі $0 < a < 1$ болса, теңсіздік белгісі қалай өзгереді?', options: ['Өзгермейді', 'Қарсы бағытқа өзгереді', 'Тек оң сандар үшін өзгереді', 'Тек теріс сандар үшін өзгереді'], ans: 'Қарсы бағытқа өзгереді' }] }
+            },
+            {
+                id: 8, title: '№8 Туынды', video: 'https://www.youtube.com/watch?v=4gbTyCtB-xQ',
+                homework: 'https://g.co/gemini/share/87ce8a4d5478',
+                solution: 'https://g.co/gemini/share/87ce8a4d5478',
+                test: { questions: [{ q: '$(x^n)\' = ?$', options: ['$nx^{n-1}$', '$n x^{n+1}$', '$x^{n-1}$', '$nx$'], ans: '$nx^{n-1}$' }, { q: 'Тұрақты санның туындысы?', options: ['1', 'x', '0', 'Белгісіз'], ans: '0' }] }
+            },
+            {
+                id: 9, title: '№9 Функция', video: 'https://www.youtube.com/watch?v=vugvvFlvkyg',
+                homework: ['https://g.co/gemini/share/d7f492bb68e3', 'https://gemini.google.com/share/306c014a8a28'],
+                solution: 'https://g.co/gemini/share/d7f492bb68e3',
+                test: { questions: [{ q: 'Функцияның графигі OY осіне қатысты симметриялы болса, ол қалай аталады?', options: ['Жұп функция', 'Тақ функция', 'Периодты функция', 'Монотонды функция'], ans: 'Жұп функция' }, { q: 'Функцияның анықталу облысы дегеніміз не?', options: ['y мәндерінің жиыны', 'x мәндерінің жиыны', 'Функцияның өсу аралығы', 'Функцияның кему аралығы'], ans: 'x мәндерінің жиыны' }] }
+            },
+            {
+                id: 10, title: '№10 Интеграл', video: 'https://www.youtube.com/watch?v=I0WwWXfvlUY',
+                homework: 'https://gemini.google.com/share/d9fefe57c2a7',
+                solution: 'https://gemini.google.com/share/d9fefe57c2a7',
+                test: { questions: [{ q: '$\\int x^n dx = ?$', options: ['$\\frac{x^{n+1}}{n+1} + C$', '$n x^{n-1} + C$', '$x^{n+1} + C$', '$\\frac{x^{n}}{n} + C$'], ans: '$\\frac{x^{n+1}}{n+1} + C$' }, { q: 'Анықталмаған интегралдың нәтижесі?', options: ['Сан', 'Функция', 'Тұрақты', 'Вектор'], ans: 'Функция' }] }
+            },
+            {
+                id: 11, title: '№11 Қисықтармен шектелген фигура', video: 'https://www.youtube.com/watch?v=xh22Z_4I5Lg',
+                homework: 'https://g.co/gemini/share/0a2c2fdfeb99',
+                solution: 'https://g.co/gemini/share/0a2c2fdfeb99',
+                test: { questions: [{ q: 'Қисықтармен шектелген фигураның ауданын табу үшін қандай операция қолданылады?', options: ['Туынды', 'Интеграл', 'Лимит', 'Теңдеу'], ans: 'Интеграл' }, { q: 'Егер $y = f(x)$ функциясы мен $OX$ осі арасындағы ауданды табу керек болса, интеграл шектері не болады?', options: ['0-ден 1-ге дейін', 'Берілген аралықтағы $x$ мәндері', '$f(x)$-тің мәндері', 'Тұрақты сандар'], ans: 'Берілген аралықтағы $x$ мәндері' }] }
+            },
+            {
+                id: 12, title: '№12 Вектор', video: 'https://www.youtube.com/watch?v=UKP7Wt2-U2M',
+                homework: 'https://g.co/gemini/share/c117a7ca33bf',
+                solution: 'https://g.co/gemini/share/c117a7ca33bf',
+                test: { questions: [{ q: 'Вектор дегеніміз не?', options: ['Тек бағыты бар шама', 'Тек модулі бар шама', 'Модулі мен бағыты бар шама', 'Тек нүкте'], ans: 'Модулі мен бағыты бар шама' }, { q: 'Екі вектордың скаляр көбейтіндісінің нәтижесі?', options: ['Вектор', 'Скаляр сан', 'Нүкте', 'Түзу'], ans: 'Скаляр сан' }] }
+            },
+            {
+                id: 13, title: '№13 Аналитикалық геометрия', video: 'https://www.youtube.com/watch?v=WrRCQaRktRs',
+                homework: ['https://g.co/gemini/share/256527b1296c', 'https://g.co/gemini/share/61b802b4a812'],
+                solution: 'https://g.co/gemini/share/256527b1296c',
+                test: { questions: [{ q: 'Түзудің жалпы теңдеуінің түрі?', options: ['$y=kx+b$', '$Ax+By+C=0$', '$x^2+y^2=R^2$', '$(x-a)^2+(y-b)^2=R^2$'], ans: '$Ax+By+C=0$' }, { q: 'Нүктелер арасындағы қашықтық формуласы?', options: ['$\\sqrt{(x_2-x_1)^2 + (y_2-y_1)^2}$', '$(x_2-x_1) + (y_2-y_1)$', '$|x_2-x_1|$', '$|y_2-y_1|$'], ans: '$\\sqrt{(x_2-x_1)^2 + (y_2-y_1)^2}$' }] }
+            },
+            {
+                id: 14, title: '№14 Функцияны зерттеу', video: 'https://www.youtube.com/watch?v=t9vDWy-h_nQ',
+                homework: null, solution: null,
+                test: { questions: [{ q: 'Функцияның экстремумы дегеніміз не?', options: ['Максимум немесе минимум нүктесі', 'Функцияның нөлдері', 'Функцияның үзіліс нүктесі', 'Функцияның анықталу облысы'], ans: 'Максимум немесе минимум нүктесі' }] }
+            },
+            {
+                id: 15, title: '№15 Күрделі теңдеулер', video: 'https://www.youtube.com/watch?v=NIvFXIdjDDU',
+                homework: null, solution: null,
+                test: { questions: [{ q: 'Рационал теңдеулерді шешу үшін не істеу керек?', options: ['Бөлшектерді ортақ бөлімге келтіру', 'Айнымалыны ауыстыру', 'Квадрат теңдеуге келтіру', 'Бәрі дұрыс'], ans: 'Бөлшектерді ортақ бөлімге келтіру' }] }
+            },
+            {
+                id: 16, title: '№16 Комбинаторика және ықтималдық', video: 'https://www.youtube.com/watch?v=eciVBVMv3Vo',
+                homework: 'https://drive.google.com/file/d/13lg7xuyXqjUNBZzVFOQtVNbbXtAxEg7A/view?usp=sharing',
+                solution: 'https://drive.google.com/file/d/13lg7xuyXqjUNBZzVFOQtVNbbXtAxEg7A/view?usp=sharing',
+                test: { questions: [{ q: 'Комбинаторика нені зерттейді?', options: ['Мүмкін болатын орналасулар саны', 'Сандар қатарын', 'Функциялардың қасиеттерін', 'Геометриялық фигураларды'], ans: 'Мүмкін болатын орналасулар саны' }] }
+            },
+        ];
+
+        let currentUserProgress = {}; // Object to store progress for the logged-in user
+        let unsubscribeProgress;
+        let currentLessonForTest = null;
+
+        // Utility function to show a custom modal message
+        function showMessageModal(message) {
+            messageModalText.textContent = message;
+            messageModal.classList.remove('hidden');
+        }
+        messageModalCloseBtn.addEventListener('click', () => messageModal.classList.add('hidden'));
+
+        // Utility to encode email for Firestore document paths
+        function encodeEmail(email) {
+            return encodeURIComponent(email).replace(/\./g, '%2E');
+        }
+
+        // Render lessons based on current user progress
+        function renderLessons() {
+            lessonsGrid.innerHTML = '';
+            let completedCount = 0;
+
+            lessons.forEach(lesson => {
+                const progress = currentUserProgress[lesson.id] || { watched: false, homeworkDone: false, testPassed: false, score: null };
+                const isCompleted = progress.testPassed; // Lesson is complete only if test is passed
+                const canTakeTest = progress.watched && progress.homeworkDone;
+                const canViewSolution = progress.testPassed && lesson.solution;
+
+                if (isCompleted) {
+                    completedCount++;
+                }
+
+                const homeworkLinks = Array.isArray(lesson.homework) ? lesson.homework : (lesson.homework ? [lesson.homework] : []);
+                const homeworkButtons = homeworkLinks.length > 0
+                    ? homeworkLinks.map((link, index) => `<a href="${link}" target="_blank" rel="noopener noreferrer" class="gradient-btn mt-2 inline-block text-white font-semibold py-2 px-5 rounded-lg shadow-md w-full text-center text-sm">Үй тапсырмасы ${homeworkLinks.length > 1 ? index + 1 : ''}</a>`).join('')
+                    : `<div class="mt-2 text-center text-gray-500 italic py-2 px-5 w-full text-sm">Үй тапсырмасы жоқ</div>`;
+
+                const markHomeworkButton = `<button data-id="${lesson.id}" class="mark-homework-btn w-full mt-2 py-2 px-4 rounded-md font-semibold text-sm ${progress.homeworkDone ? 'bg-green-100 text-green-700 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-green-200'}" ${progress.homeworkDone ? 'disabled' : ''}>
+                    ${progress.homeworkDone ? 'Үй тапсырмасы орындалды ✔️' : 'Үй тапсырмасын орындадым'}
+                </button>`;
+
+                const testButton = `<button data-id="${lesson.id}" class="take-test-btn w-full mt-2 py-2 px-4 rounded-md font-semibold text-sm ${canTakeTest ? 'gradient-btn text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}" ${!canTakeTest ? 'disabled' : ''}>
+                    ${progress.testPassed ? `Тест (${progress.score}%) қайта тапсыру` : 'Тест тапсыру'}
+                </button>`;
+
+                const solutionButton = `<button data-id="${lesson.id}" class="view-solution-btn w-full mt-2 py-2 px-4 rounded-md font-semibold text-sm ${canViewSolution ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}" ${!canViewSolution ? 'disabled' : ''}>
+                    Шешімі
+                </button>`;
+
+                const card = `
+                    <div class="lesson-card bg-white rounded-xl shadow-lg overflow-hidden relative p-5">
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">${lesson.title}</h3>
+                        <a href="${lesson.video}" target="_blank" rel="noopener noreferrer" data-id="${lesson.id}" class="watch-video-btn text-green-600 hover:text-green-800 font-medium flex items-center mb-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg>
+                            Видеосабақты көру ${progress.watched ? '✔️' : ''}
+                        </a>
+                        ${homeworkButtons}
+                        ${markHomeworkButton}
+                        ${testButton}
+                        ${solutionButton}
+                        ${isCompleted ? '<div class="completed-overlay">✔️ Аяқталды</div>' : ''}
+                    </div>
+                `;
+                lessonsGrid.insertAdjacentHTML('beforeend', card);
+            });
+
+            // Update progress bar
+            const totalLessons = lessons.length;
+            const percentage = totalLessons > 0 ? (completedCount / totalLessons) * 100 : 0;
+            progressBar.style.width = `${percentage}%`;
+            progressText.textContent = `${completedCount}/${totalLessons} сабақ аяқталды`;
+
+            // Render MathJax
+            if (typeof MathJax !== 'undefined') {
+                MathJax.typesetPromise();
+            }
+        }
+
+        // Update user progress in Firestore
+        async function updateProgress(lessonId, field, value) {
+            const userEmail = sessionStorage.getItem('mathUserEmail');
+            if (!userEmail) {
+                showMessageModal('Курс прогрессін сақтау үшін жүйеге кіріңіз.');
+                return;
+            }
+
+            const safeEmail = encodeEmail(userEmail);
+            const progressDocRef = doc(db, `artifacts/${appId}/users/${safeEmail}/progress`, 'lessons_status');
+
+            try {
+                // Ensure currentUserProgress is initialized for the lesson
+                if (!currentUserProgress[lessonId]) {
+                    currentUserProgress[lessonId] = { watched: false, homeworkDone: false, testPassed: false, score: null };
+                }
+                currentUserProgress[lessonId][field] = value;
+
+                // Create a temporary object for Firestore update to avoid overwriting other lesson data
+                const updateObject = {};
+                updateObject[lessonId] = currentUserProgress[lessonId];
+
+                await setDoc(progressDocRef, updateObject, { merge: true });
+                renderLessons(); // Re-render to reflect changes
+            } catch (e) {
+                console.error("Error updating progress:", e);
+                showMessageModal("Прогрессті жаңарту кезінде қате кетті.");
+            }
+        }
+
+        // Setup Firestore listener for user progress
+        function setupProgressListener(userEmail) {
+            if (unsubscribeProgress) unsubscribeProgress(); // Unsubscribe from previous listener
+
+            const safeEmail = encodeEmail(userEmail);
+            const progressDocRef = doc(db, `artifacts/${appId}/users/${safeEmail}/progress`, 'lessons_status');
+
+            unsubscribeProgress = onSnapshot(progressDocRef, (docSnap) => {
+                currentUserProgress = docSnap.exists() ? docSnap.data() : {};
+                renderLessons();
+            }, (error) => {
+                console.error("Error listening to progress:", error);
+                // Optionally show a user-friendly message
+            });
+        }
+
+        // Handle login
+        async function handleLogin(event) {
+            event.preventDefault();
+            const email = emailInput.value.trim().toLowerCase();
+            const code = codeInput.value.trim();
+
+            if (!email || !code) {
+                showMessageModal('Email мен кодты толық енгізіңіз.');
+                return;
+            }
+
+            try {
+                const docRef = doc(db, "access_codes", email);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists() && docSnap.data().code === code) {
+                    sessionStorage.setItem('mathUserEmail', email);
+                    initializeAppView(email);
+                } else {
+                    showMessageModal('Email немесе код қате. Деректерді тексеріп, қайталап көріңіз.');
+                }
+            } catch (error) {
+                console.error("Login error:", error);
+                showMessageModal('Жүйеге кіру кезінде техникалық қате пайда болды.');
+            }
+        }
+
+        // Initialize app view after successful login
+        function initializeAppView(email) {
+            userEmailEl.textContent = email;
+            loginContainer.classList.add('hidden');
+            appContainer.classList.remove('hidden');
+            setupProgressListener(email);
+        }
+
+        // Event listener for lesson actions (video, homework, test, solution)
+        lessonsGrid.addEventListener('click', (e) => {
+            const target = e.target;
+            const lessonId = parseInt(target.dataset.id);
+            const lesson = lessons.find(l => l.id === lessonId);
+
+            if (!lesson) return;
+
+            if (target.classList.contains('watch-video-btn')) {
+                updateProgress(lessonId, 'watched', true);
+            } else if (target.classList.contains('mark-homework-btn')) {
+                if (!currentUserProgress[lessonId] || !currentUserProgress[lessonId].homeworkDone) {
+                    updateProgress(lessonId, 'homeworkDone', true);
+                }
+            } else if (target.classList.contains('take-test-btn')) {
+                currentLessonForTest = lesson;
+                displayTestModal();
+            } else if (target.classList.contains('view-solution-btn')) {
+                displaySolutionModal(lesson);
+            }
+        });
+
+        // Test Modal Functions
+        function displayTestModal() {
+            if (!currentLessonForTest) return;
+
+            testModalTitle.textContent = `${currentLessonForTest.title} Тест`;
+            testQuestionsContainer.innerHTML = ''; // Clear previous questions
+
+            currentLessonForTest.test.questions.forEach((qData, index) => {
+                const questionHtml = `
+                    <div class="test-question-container">
+                        <p class="font-medium text-lg mb-2"><span class="mr-2">${index + 1}.</span> <span class="math">${qData.q}</span></p>
+                        ${qData.options.map((option, optIndex) => `
+                            <label class="test-option-label">
+                                <input type="radio" name="question-${index}" value="${option}" class="form-radio h-5 w-5">
+                                <span class="text-base math">${option}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                `;
+                testQuestionsContainer.insertAdjacentHTML('beforeend', questionHtml);
+            });
+
+            // Re-render MathJax in the test modal
+            if (typeof MathJax !== 'undefined') {
+                MathJax.typesetPromise(testQuestionsContainer);
+            }
+            testModal.classList.remove('hidden');
+        }
+
+        testSubmitBtn.addEventListener('click', async () => {
+            if (!currentLessonForTest) return;
+
+            let correctAnswers = 0;
+            const totalQuestions = currentLessonForTest.test.questions.length;
+
+            currentLessonForTest.test.questions.forEach((qData, index) => {
+                const selectedOption = document.querySelector(`input[name="question-${index}"]:checked`);
+                if (selectedOption && selectedOption.value === qData.ans) {
+                    correctAnswers++;
+                }
+            });
+
+            const score = (correctAnswers / totalQuestions) * 100;
+            let message = '';
+            if (score >= 50) {
+                message = `Құттықтаймыз! Сіз тесттен өттіңіз (${score.toFixed(0)}%). Енді шешімдерді көре аласыз.`;
+                await updateProgress(currentLessonForTest.id, 'testPassed', true);
+                await updateProgress(currentLessonForTest.id, 'score', score.toFixed(0));
+            } else {
+                message = `Өкінішке орай, тесттен өте алмадыңыз (${score.toFixed(0)}%). Қайтадан тапсырып көріңіз.`;
+            }
+
+            showMessageModal(message);
+            testModal.classList.add('hidden');
+            currentLessonForTest = null; // Reset
+        });
+
+        testCancelBtn.addEventListener('click', () => {
+            testModal.classList.add('hidden');
+            currentLessonForTest = null;
+        });
+
+        // Solution Modal Functions
+        function displaySolutionModal(lesson) {
+            if (!lesson.solution) {
+                showMessageModal('Бұл сабақ үшін шешімдер жоқ.');
+                return;
+            }
+            solutionModalTitle.textContent = `${lesson.title} Шешімдері`;
+            solutionIframe.src = lesson.solution;
+            solutionModal.classList.remove('hidden');
+        }
+
+        solutionCloseBtn.addEventListener('click', () => {
+            solutionModal.classList.add('hidden');
+            solutionIframe.src = ''; // Clear iframe src to stop loading
+        });
+
+        // Main function to start the app
+        async function main() {
+            try {
+                // Sign in anonymously to get permissions for Firestore
+                await signInAnonymously(auth);
+                console.log("Authenticated anonymously.");
+
+                // Check for a logged-in user on page load
+                const storedEmail = sessionStorage.getItem('mathUserEmail');
+                if (storedEmail) {
+                    initializeAppView(storedEmail);
+                }
+            } catch(error) {
+                console.error("Authentication or initialization failed:", error);
+                showMessageModal("Қолданбаны іске қосу мүмкін болмады. Бетті қайта жүктеп көріңіз.");
+            }
+        }
+
+        // Run the main function when the page is loaded
+        document.addEventListener('DOMContentLoaded', main);
+
+    </script>
+
+</body>
+</html>
+
